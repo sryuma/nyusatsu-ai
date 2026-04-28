@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入札AI — 広島市公共工事 入札最適化システム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+:root {
+  --bg: #0a0e17; --card: #141b2d; --card2: #1a2332; --card3: #1f2940;
+  --text: #e0e6ed; --muted: #8892a4; --border: rgba(255,255,255,0.06);
+  --accent: #00b4d8; --accent2: #0077b6; --green: #00b894; --orange: #ff6b35; --red: #d63031; --purple: #6c5ce7;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* NAV */
+.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;height:56px;gap:8px}
+.nav-logo{font-weight:900;font-size:18px;margin-right:24px;white-space:nowrap}
+.nav-logo span{color:var(--accent)}
+.nav-tabs{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav-tab{padding:8px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:8px;white-space:nowrap;transition:all .15s}
+.nav-tab:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+.nav-tab.active{color:var(--accent);background:rgba(0,180,216,0.1)}
+
+/* LAYOUT */
+.container{max-width:1100px;margin:0 auto;padding:20px 16px}
+.page{display:none}.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card h2{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-blue{background:var(--accent)}.dot-green{background:var(--green)}.dot-orange{background:var(--orange)}.dot-purple{background:var(--purple)}
+
+/* STATS */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-box .val{font-size:26px;font-weight:900;color:var(--accent);line-height:1.2}
+.stat-box .lbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:var(--muted);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card)}
+td{padding:8px 10px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.hl{color:var(--accent);font-weight:700}
+.good{color:var(--green)}.warn{color:var(--orange)}.bad{color:var(--red)}
+.table-wrap{max-height:500px;overflow-y:auto;border-radius:8px}
+
+/* FORMS */
+input,select{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;width:100%;outline:none;transition:border .15s}
+input:focus,select:focus{border-color:var(--accent)}
+label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px;display:block}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column}
+button{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .1s,opacity .1s}
+button:hover{transform:translateY(-1px);opacity:.9}
+button:active{transform:translateY(0)}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:6px}
+.btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+
+/* RESULT BOX */
+.result-box{background:var(--card2);border:1px solid rgba(0,180,216,0.2);border-radius:12px;padding:20px;margin:16px 0}
+.result-box h3{font-size:14px;color:var(--accent);margin-bottom:12px}
+.result-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid var(--border)}
+.result-row:last-child{border-bottom:none}
+.result-row .k{color:var(--muted)}
+.result-row .v{font-weight:700}
+.v-aggressive{color:var(--orange)!important;font-size:15px}
+.v-recommended{color:var(--green)!important;font-size:18px}
+.v-safe{color:var(--accent)!important;font-size:15px}
+
+/* INSIGHT */
+.insight{background:rgba(0,184,148,0.08);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:14px 18px;margin:16px 0;font-size:13px;line-height:1.8}
+.insight strong{color:var(--green)}
+
+/* SEARCH */
+.search-box{position:relative;margin-bottom:16px}
+.search-box input{padding-left:36px}
+.search-box::before{content:'';position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;border:2px solid var(--muted);border-radius:50%}
+
+/* TAG */
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;margin-right:4px}
+.tag-blue{background:rgba(0,180,216,0.15);color:var(--accent)}
+.tag-green{background:rgba(0,184,148,0.15);color:var(--green)}
+.tag-orange{background:rgba(255,107,53,0.15);color:var(--orange)}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .stat-box .val{font-size:20px}
+  .form-grid{grid-template-columns:1fr}
+  .nav-tab{padding:6px 12px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">入札<span>AI</span></div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" data-page="dashboard">ダッシュボード</div>
+      <div class="nav-tab" data-page="predict">落札額予測</div>
+      <div class="nav-tab" data-page="competitors">競合分析</div>
+      <div class="nav-tab" data-page="listings">案件一覧</div>
+      <div class="nav-tab" data-page="alerts">アラート設定</div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboard" class="page active">
+  <div class="stat-row" id="kpi-row"></div>
+
+  <div class="insight">
+    <strong>最重要発見:</strong> 広島市の工事入札は、落札率の中央値が <strong>90.10%</strong>（予定価格の約9割）。最低制限価格率の中央値 <strong>89.94%</strong> とほぼ一致。落札者は最低制限価格のわずか <strong>0.06ポイント上</strong> で勝っている。
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-blue"></span>落札率の分布（検証済み187件）</h2>
+    <div id="rate-chart"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <h2><span class="dot dot-green"></span>工種別 落札率</h2>
+      <div class="table-wrap" id="koshu-table"></div>
+    </div>
+    <div class="card">
+      <h2><span class="dot dot-orange"></span>入札者数と落札率</h2>
+      <div class="table-wrap" id="bidder-count-table"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-purple"></span>データソース</h2>
+    <div style="font-size:12px;line-height:2;color:var(--muted)">
+      <div><strong style="color:var(--text)">ソース:</strong> <a href="https://ppi.keiyaku.city.hiroshima.lg.jp/PPI_P/" target="_blank">広島市調達情報公開システム</a>（広島市契約課 運営）</div>
+      <div><strong style="color:var(--text)">期間:</strong> 2025年11月19日 〜 2026年3月25日（約4ヶ月）</div>
+      <div><strong style="color:var(--text)">一覧:</strong> 808件（サイト掲載全件） / <strong style="color:var(--text)">詳細検証済み:</strong> 197件</div>
+      <div><strong style="color:var(--text)">入札者:</strong> 2,542件（319社）</div>
+      <div><strong style="color:var(--text)">検証:</strong> 一覧の工事名と詳細ページの工事名を全件照合し一致確認済み</div>
+      <div><strong style="color:var(--text)">取得日:</strong> 2026年4月29日</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PREDICT ===== -->
+<div id="predict" class="page">
+  <div class="card">
+    <h2><span class="dot dot-green"></span>落札金額予測シミュレーター</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">案件情報を入力すると、過去データに基づいて最適な入札金額をレコメンドします。</p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>予定価格（円）</label>
+        <input type="text" id="pred-yotei" placeholder="例: 20000000" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>工種</label>
+        <select id="pred-koshu">
+          <option value="土木一式">土木一式</option>
+          <option value="とび・土工・コンクリート">とび・土工・コンクリート</option>
+          <option value="舗装">舗装</option>
+          <option value="建築一式">建築一式</option>
+          <option value="機械器具設置">機械器具設置</option>
+          <option value="電気">電気</option>
+          <option value="管">管</option>
+          <option value="遊具設置">遊具設置</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>想定入札者数</label>
+        <input type="number" id="pred-bidders" placeholder="例: 10" value="10">
+      </div>
+    </div>
+    <button onclick="runPredict()">予測する</button>
+    <div id="predict-result"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-blue"></span>予測ロジック</h2>
+    <div style="font-size:13px;color:var(--muted);line-height:2">
+      <p><strong style="color:var(--text)">Step 1:</strong> 最低制限価格を推定（予定価格 &times; 89.94%）</p>
+      <p><strong style="color:var(--text)">Step 2:</strong> 工種別の落札率分布を参照（例: 土木一式は中央値90.07%）</p>
+      <p><strong style="color:var(--text)">Step 3:</strong> 入札者数による補正（1-2社→高め / 20社以上→低め）</p>
+      <p><strong style="color:var(--text)">Step 4:</strong> 攻め・推奨・安全の3段階で入札額を算出</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COMPETITORS ===== -->
+<div id="competitors" class="page">
+  <div class="card">
+    <h2><span class="dot dot-orange"></span>競合業者分析</h2>
+    <div class="search-box">
+      <input type="text" id="comp-search" placeholder="業者名で検索..." oninput="filterCompetitors()">
+    </div>
+    <div class="table-wrap" style="max-height:600px" id="comp-table"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-purple"></span>業者詳細</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">上の表で業者名をクリックすると詳細が表示されます。</p>
+    <div id="comp-detail"></div>
+  </div>
+</div>
+
+<!-- ===== LISTINGS ===== -->
+<div id="listings" class="page">
+  <div class="card">
+    <h2><span class="dot dot-blue"></span>工事案件一覧（808件）</h2>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>工事名で検索</label>
+        <input type="text" id="list-search" placeholder="キーワード..." oninput="filterListings()">
+      </div>
+      <div class="form-group">
+        <label>並び替え</label>
+        <select id="list-sort" onchange="filterListings()">
+          <option value="date-desc">開札日（新しい順）</option>
+          <option value="date-asc">開札日（古い順）</option>
+          <option value="amount-desc">落札金額（高い順）</option>
+          <option value="amount-asc">落札金額（低い順）</option>
+        </select>
+      </div>
+    </div>
+    <div id="listing-count" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+    <div class="table-wrap" style="max-height:600px" id="listing-table"></div>
+  </div>
+</div>
+
+<!-- ===== ALERTS ===== -->
+<div id="alerts" class="page">
+  <div class="card">
+    <h2><span class="dot dot-green"></span>アラート設定</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">室田工業に合った案件が公開されたら通知する条件を設定します。</p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>対象工種（複数選択可）</label>
+        <select id="alert-koshu" multiple size="5" style="height:auto">
+          <option value="土木一式" selected>土木一式</option>
+          <option value="とび・土工・コンクリート" selected>とび・土工・コンクリート</option>
+          <option value="舗装" selected>舗装</option>
+          <option value="建築一式">建築一式</option>
+          <option value="塗装">塗装</option>
+          <option value="防水">防水</option>
+          <option value="電気">電気</option>
+          <option value="管">管</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>予定価格（下限）</label>
+        <input type="text" id="alert-min" placeholder="例: 5000000" value="5000000">
+        <label style="margin-top:12px">予定価格（上限）</label>
+        <input type="text" id="alert-max" placeholder="例: 100000000" value="100000000">
+      </div>
+      <div class="form-group">
+        <label>対象エリア（キーワード）</label>
+        <input type="text" id="alert-area" placeholder="例: 安芸区,南区">
+        <label style="margin-top:12px">通知先</label>
+        <input type="email" id="alert-email" placeholder="メールアドレス">
+      </div>
+    </div>
+    <button onclick="saveAlerts()">アラート設定を保存</button>
+    <div id="alert-saved" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-orange"></span>マッチした過去案件（プレビュー）</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">現在のアラート条件に合致する過去案件を表示します。</p>
+    <div id="alert-preview"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot dot-blue"></span>自動データ収集ステータス</h2>
+    <div style="font-size:13px;line-height:2">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        <strong>スクレイパー稼働中</strong>
+      </div>
+      <div style="color:var(--muted)">
+        <div>対象サイト: <a href="https://ppi.keiyaku.city.hiroshima.lg.jp/PPI_P/" target="_blank">広島市調達情報公開システム</a></div>
+        <div>取得カテゴリ: 工事 / 委託 / 小規模修繕</div>
+        <div>最終取得: 2026-04-29 04:09 JST</div>
+        <div>次回取得: 毎日 06:00 JST（自動）</div>
+        <div>蓄積データ: 808件（一覧） / 197件（詳細検証済み）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ===== DATA =====
+let DATA = null;
+
+async function loadData() {
+  const resp = await fetch('data.json');
+  DATA = await resp.json();
+  initApp();
+}
+
+// ===== NAV =====
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.page).classList.add('active');
+  });
+});
+
+// ===== UTILS =====
+function fmt(n) { return n == null ? '-' : Number(n).toLocaleString('ja-JP'); }
+function pct(n) { return n == null ? '-' : n.toFixed(2) + '%'; }
+function toNum(s) { try { return parseFloat(String(s).replace(/,/g, '')); } catch { return null; } }
+
+function makeTable(headers, rows) {
+  let html = '<table><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  html += rows.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('');
+  html += '</table>';
+  return html;
+}
+
+// ===== INIT =====
+function initApp() {
+  renderKPI();
+  renderRateChart();
+  renderKoshuTable();
+  renderBidderCountTable();
+  renderCompetitors();
+  renderListings();
+  renderAlertPreview();
+}
+
+// ===== DASHBOARD =====
+function renderKPI() {
+  const m = DATA.meta;
+  const kpis = [
+    { val: m.total_listings, lbl: '一覧取得数' },
+    { val: m.verified_details, lbl: '詳細検証済み' },
+    { val: m.bidder_records.toLocaleString(), lbl: '入札者データ' },
+    { val: m.unique_companies, lbl: 'ユニーク業者数' },
+    { val: '90.10%', lbl: '落札率中央値' },
+    { val: '89.94%', lbl: '最低制限価格率' },
+  ];
+  document.getElementById('kpi-row').innerHTML = kpis.map(k =>
+    `<div class="stat-box"><div class="val">${k.val}</div><div class="lbl">${k.lbl}</div></div>`
+  ).join('');
+}
+
+function renderRateChart() {
+  const rates = [];
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+    if (y && r && y > 0) { const rate = r / y * 100; if (rate >= 50 && rate <= 105) rates.push(rate); }
+  });
+  const buckets = [[87,89],[89,90],[90,91],[91,93],[93,95],[95,97],[97,99],[99,101]];
+  const counts = buckets.map(([lo,hi]) => rates.filter(r => r >= lo && r < hi).length);
+  const max = Math.max(...counts);
+  let html = '<div style="margin:8px 0">';
+  buckets.forEach(([lo,hi], i) => {
+    const w = max > 0 ? (counts[i] / max * 100) : 0;
+    const color = (lo >= 89 && lo < 91) ? 'var(--green)' : (counts[i] > 5 ? 'var(--accent)' : 'var(--orange)');
+    html += `<div style="display:flex;align-items:center;margin:4px 0;font-size:12px">
+      <span style="width:80px;text-align:right;color:var(--muted);padding-right:10px;flex-shrink:0">${lo}-${hi}%</span>
+      <div style="flex:1;height:24px;background:rgba(255,255,255,0.03);border-radius:4px;overflow:hidden">
+        <div style="width:${w}%;height:100%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px;color:#fff;font-weight:700;font-size:11px;min-width:30px">${counts[i]}</div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('rate-chart').innerHTML = html;
+}
+
+function renderKoshuTable() {
+  const byType = {};
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+    const k = (d['工種ランク'] || '不明').split('(')[0].trim();
+    if (y && r && y > 0) { const rate = r / y * 100; if (rate >= 50 && rate <= 105) { if (!byType[k]) byType[k] = []; byType[k].push(rate); } }
+  });
+  const rows = Object.entries(byType).filter(([,v]) => v.length >= 3).sort((a,b) => b[1].length - a[1].length)
+    .map(([k, v]) => {
+      v.sort((a,b) => a - b);
+      const med = v[Math.floor(v.length/2)];
+      const avg = v.reduce((a,b) => a+b, 0) / v.length;
+      return [k, `<span class="num">${v.length}</span>`, `<span class="num">${pct(avg)}</span>`, `<span class="num hl">${pct(med)}</span>`];
+    });
+  document.getElementById('koshu-table').innerHTML = makeTable(['工種','件数','平均','中央値'], rows);
+}
+
+function renderBidderCountTable() {
+  const byN = {};
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']), n = parseInt(d['入札者数']);
+    if (y && r && n && y > 0) {
+      const rate = r / y * 100;
+      if (rate < 50 || rate > 105) return;
+      let bucket;
+      if (n <= 2) bucket = '1-2社';
+      else if (n <= 5) bucket = '3-5社';
+      else if (n <= 10) bucket = '6-10社';
+      else if (n <= 20) bucket = '11-20社';
+      else bucket = '21社+';
+      if (!byN[bucket]) byN[bucket] = [];
+      byN[bucket].push(rate);
+    }
+  });
+  const order = ['1-2社','3-5社','6-10社','11-20社','21社+'];
+  const rows = order.filter(k => byN[k]).map(k => {
+    const v = byN[k]; v.sort((a,b) => a-b);
+    const med = v[Math.floor(v.length/2)];
+    const cls = med > 92 ? 'good' : '';
+    return [k, `<span class="num">${v.length}</span>`, `<span class="num ${cls}">${pct(med)}</span>`];
+  });
+  document.getElementById('bidder-count-table').innerHTML = makeTable(['入札者数','案件数','中央値'], rows);
+}
+
+// ===== PREDICT =====
+function runPredict() {
+  const yotei = toNum(document.getElementById('pred-yotei').value);
+  const koshu = document.getElementById('pred-koshu').value;
+  const nBid = parseInt(document.getElementById('pred-bidders').value) || 10;
+  if (!yotei || yotei <= 0) { alert('予定価格を入力してください'); return; }
+
+  // 工種別落札率を算出
+  const koshuBase = koshu.split('(')[0].trim();
+  const koshuRates = [];
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+    const k = (d['工種ランク'] || '').split('(')[0].trim();
+    if (y && r && y > 0 && k === koshuBase) {
+      const rate = r / y * 100;
+      if (rate >= 50 && rate <= 105) koshuRates.push(rate);
+    }
+  });
+
+  // 全体データにフォールバック
+  const allRates = [];
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+    if (y && r && y > 0) { const rate = r / y * 100; if (rate >= 50 && rate <= 105) allRates.push(rate); }
+  });
+
+  const rates = koshuRates.length >= 5 ? koshuRates : allRates;
+  rates.sort((a, b) => a - b);
+
+  const median = rates[Math.floor(rates.length / 2)];
+  const q1 = rates[Math.floor(rates.length / 4)];
+  const q3 = rates[Math.floor(3 * rates.length / 4)];
+
+  // 入札者数補正
+  let bidderAdj = 0;
+  if (nBid <= 2) bidderAdj = 2.5;
+  else if (nBid <= 5) bidderAdj = 0.5;
+  else if (nBid <= 10) bidderAdj = 0;
+  else if (nBid <= 20) bidderAdj = -0.1;
+  else bidderAdj = -0.3;
+
+  const saiteiRate = 89.94;
+  const saitei = yotei * saiteiRate / 100;
+
+  const aggressiveRate = saiteiRate + 0.1;
+  const recommendedRate = median + bidderAdj;
+  const safeRate = q3 + bidderAdj;
+
+  const aggressive = yotei * aggressiveRate / 100;
+  const recommended = yotei * recommendedRate / 100;
+  const safe = yotei * safeRate / 100;
+
+  const nData = koshuRates.length >= 5 ? koshuRates.length : allRates.length;
+  const dataLabel = koshuRates.length >= 5 ? `${koshuBase}の${nData}件` : `全工種${nData}件（${koshuBase}のデータ不足のためフォールバック）`;
+
+  document.getElementById('predict-result').innerHTML = `
+    <div class="result-box">
+      <h3>予測結果</h3>
+      <div class="result-row"><span class="k">予定価格</span><span class="v">${fmt(yotei)}円</span></div>
+      <div class="result-row"><span class="k">最低制限価格（推定）</span><span class="v">${fmt(Math.round(saitei))}円（${pct(saiteiRate)}）</span></div>
+      <div class="result-row"><span class="k">工種</span><span class="v">${koshu}</span></div>
+      <div class="result-row"><span class="k">想定入札者数</span><span class="v">${nBid}社</span></div>
+      <div class="result-row"><span class="k">参照データ</span><span class="v">${dataLabel}</span></div>
+      <div style="height:1px;background:var(--border);margin:8px 0"></div>
+      <div class="result-row"><span class="k">攻めの入札額</span><span class="v v-aggressive">${fmt(Math.round(aggressive))}円（${pct(aggressiveRate)}）</span></div>
+      <div class="result-row"><span class="k">推奨入札額</span><span class="v v-recommended">${fmt(Math.round(recommended))}円（${pct(recommendedRate)}）</span></div>
+      <div class="result-row"><span class="k">安全な入札額</span><span class="v v-safe">${fmt(Math.round(safe))}円（${pct(safeRate)}）</span></div>
+    </div>
+    <div class="insight">
+      <strong>解説:</strong> ${koshuBase}の過去落札率は中央値${pct(median)}。入札者${nBid}社の補正を加味し、推奨は<strong>${pct(recommendedRate)}</strong>。最低制限価格との差はわずか<strong>${fmt(Math.round(recommended - saitei))}円</strong>。
+    </div>
+  `;
+}
+
+// ===== COMPETITORS =====
+let compData = [];
+function buildCompData() {
+  const map = {};
+  DATA.bidders.forEach(b => {
+    const name = b['業者名'];
+    if (!name) return;
+    if (!map[name]) map[name] = { name, bids: 0, wins: 0, amounts: [], cases: [] };
+    map[name].bids++;
+    if ((b['備考'] || '').includes('決定')) map[name].wins++;
+    const amt = toNum(b['入札金額1回目']);
+    if (amt) map[name].amounts.push(amt);
+    map[name].cases.push(b);
+  });
+  compData = Object.values(map).sort((a, b) => b.bids - a.bids);
+}
+
+function renderCompetitors(filter = '') {
+  if (!compData.length) buildCompData();
+  const filtered = filter ? compData.filter(c => c.name.includes(filter)) : compData;
+
+  const rows = filtered.slice(0, 100).map((c, i) => {
+    const winRate = c.bids > 0 ? (c.wins / c.bids * 100) : 0;
+    const cls = winRate >= 15 ? 'good' : winRate > 0 ? '' : 'bad';
+    return [
+      i + 1,
+      `<a href="#" onclick="showCompDetail('${c.name.replace(/'/g,"\\'")}');return false" style="font-weight:600">${c.name}</a>`,
+      `<span class="num">${c.bids}</span>`,
+      `<span class="num">${c.wins}</span>`,
+      `<span class="num ${cls}">${winRate.toFixed(1)}%</span>`,
+    ];
+  });
+  document.getElementById('comp-table').innerHTML = makeTable(['#','業者名','応札','落札','勝率'], rows);
+}
+
+function filterCompetitors() {
+  renderCompetitors(document.getElementById('comp-search').value);
+}
+
+function showCompDetail(name) {
+  const c = compData.find(x => x.name === name);
+  if (!c) return;
+  const winRate = c.bids > 0 ? (c.wins / c.bids * 100) : 0;
+
+  // この業者の入札案件リスト
+  const caseRows = c.cases.slice(0, 20).map(b => {
+    const remark = b['備考'] || '';
+    const cls = remark.includes('決定') ? 'good' : remark.includes('失格') ? 'bad' : '';
+    return [
+      b['案件番号'],
+      (b['工事名'] || '').substring(0, 30),
+      `<span class="num">${fmt(toNum(b['入札金額1回目']))}</span>`,
+      `<span class="${cls}">${remark || '-'}</span>`,
+    ];
+  });
+
+  document.getElementById('comp-detail').innerHTML = `
+    <div class="result-box">
+      <h3>${name}</h3>
+      <div class="result-row"><span class="k">応札回数</span><span class="v">${c.bids}回</span></div>
+      <div class="result-row"><span class="k">落札回数</span><span class="v">${c.wins}回</span></div>
+      <div class="result-row"><span class="k">勝率</span><span class="v ${winRate >= 15 ? 'good' : ''}">${winRate.toFixed(1)}%</span></div>
+    </div>
+    <div style="margin-top:12px;font-size:13px;font-weight:700;margin-bottom:8px">入札履歴（直近20件）</div>
+    <div class="table-wrap" style="max-height:400px">
+      ${makeTable(['案件番号','工事名','入札額','結果'], caseRows)}
+    </div>
+  `;
+}
+
+// ===== LISTINGS =====
+function renderListings() { filterListings(); }
+
+function filterListings() {
+  const search = (document.getElementById('list-search').value || '').toLowerCase();
+  const sort = document.getElementById('list-sort').value;
+
+  let items = DATA.results.map(r => ({
+    ...r,
+    _amount: toNum(r['落札金額']),
+    _date: r['開札日'] || '',
+  }));
+
+  if (search) items = items.filter(r => (r['工事名'] || '').toLowerCase().includes(search) || (r['落札業者名'] || '').toLowerCase().includes(search) || (r['工事場所'] || '').toLowerCase().includes(search));
+
+  if (sort === 'date-desc') items.sort((a, b) => b._date.localeCompare(a._date));
+  else if (sort === 'date-asc') items.sort((a, b) => a._date.localeCompare(b._date));
+  else if (sort === 'amount-desc') items.sort((a, b) => (b._amount || 0) - (a._amount || 0));
+  else if (sort === 'amount-asc') items.sort((a, b) => (a._amount || 0) - (b._amount || 0));
+
+  document.getElementById('listing-count').textContent = `${items.length}件表示 / 全${DATA.results.length}件`;
+
+  const rows = items.slice(0, 200).map(r => [
+    `<span style="color:var(--muted)">${r['開札日']}</span>`,
+    `<span style="max-width:280px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r['工事名']}</span>`,
+    `<span style="color:var(--muted);font-size:11px">${r['工事場所']}</span>`,
+    `<span class="num">${r['落札金額'] ? fmt(toNum(r['落札金額'])) + '円' : r['落札金額']}</span>`,
+    r['落札業者名'],
+  ]);
+
+  document.getElementById('listing-table').innerHTML = makeTable(['開札日','工事名','場所','落札金額','落札者'], rows);
+}
+
+// ===== ALERTS =====
+function saveAlerts() {
+  const config = {
+    koshu: Array.from(document.getElementById('alert-koshu').selectedOptions).map(o => o.value),
+    minPrice: toNum(document.getElementById('alert-min').value),
+    maxPrice: toNum(document.getElementById('alert-max').value),
+    area: document.getElementById('alert-area').value,
+    email: document.getElementById('alert-email').value,
+    savedAt: new Date().toISOString(),
+  };
+  localStorage.setItem('nyusatsu-alert', JSON.stringify(config));
+  document.getElementById('alert-saved').innerHTML = `<div class="insight"><strong>保存しました。</strong> 条件に合った案件が公開されたら通知します。</div>`;
+  renderAlertPreview();
+}
+
+function renderAlertPreview() {
+  const saved = localStorage.getItem('nyusatsu-alert');
+  const config = saved ? JSON.parse(saved) : { koshu: ['土木一式','とび・土工・コンクリート','舗装'], minPrice: 5000000, maxPrice: 100000000, area: '' };
+
+  // 詳細データからマッチする案件を検索
+  const matched = DATA.details.filter(d => {
+    const koshu = (d['工種ランク'] || '').split('(')[0].trim();
+    if (config.koshu.length && !config.koshu.some(k => koshu.includes(k))) return false;
+    const price = toNum(d['予定価格']);
+    if (config.minPrice && price && price < config.minPrice) return false;
+    if (config.maxPrice && price && price > config.maxPrice) return false;
+    if (config.area) {
+      const areas = config.area.split(',').map(a => a.trim());
+      if (!areas.some(a => (d['工事場所'] || '').includes(a) || (d['契約担当課'] || '').includes(a))) return false;
+    }
+    return true;
+  });
+
+  const rows = matched.slice(0, 20).map(d => {
+    const y = toNum(d['予定価格']);
+    return [
+      `<span style="color:var(--muted)">${d['開札日']}</span>`,
+      d['工事名'].substring(0, 35),
+      `<span class="num">${y ? fmt(y) + '円' : '-'}</span>`,
+      `<span class="tag tag-blue">${(d['工種ランク'] || '').split('(')[0]}</span>`,
+      `<span class="num">${d['入札者数']}社</span>`,
+    ];
+  });
+
+  document.getElementById('alert-preview').innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${matched.length}件がマッチ</div>
+    <div class="table-wrap" style="max-height:400px">
+      ${makeTable(['開札日','工事名','予定価格','工種','入札者'], rows)}
+    </div>
+  `;
+}
+
+// ===== BOOT =====
+loadData();
+</script>
+</body>
+</html>
