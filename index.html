@@ -105,10 +105,11 @@ button:active{transform:translateY(0)}
   <div class="nav-inner">
     <div class="nav-logo">入札<span>AI</span></div>
     <div class="nav-tabs">
-      <div class="nav-tab active" data-page="dashboard">ダッシュボード</div>
+      <div class="nav-tab active" data-page="live" style="color:var(--green);font-weight:900">NEW 入札案件</div>
+      <div class="nav-tab" data-page="dashboard">ダッシュボード</div>
       <div class="nav-tab" data-page="predict">落札額予測</div>
       <div class="nav-tab" data-page="competitors">競合分析</div>
-      <div class="nav-tab" data-page="listings">案件一覧</div>
+      <div class="nav-tab" data-page="listings">過去案件</div>
       <div class="nav-tab" data-page="alerts">アラート設定</div>
     </div>
   </div>
@@ -116,8 +117,42 @@ button:active{transform:translateY(0)}
 
 <div class="container">
 
+<!-- ===== LIVE BIDS ===== -->
+<div id="live" class="page active">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <span style="width:12px;height:12px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
+    <span style="font-size:18px;font-weight:900">現在入札受付中の案件</span>
+    <span style="font-size:12px;color:var(--muted)" id="live-meta"></span>
+  </div>
+  <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}</style>
+
+  <div class="form-grid" style="margin-bottom:12px">
+    <div class="form-group">
+      <label>工事名・場所で検索</label>
+      <input type="text" id="live-search" placeholder="キーワード..." oninput="renderLive()">
+    </div>
+    <div class="form-group">
+      <label>工種フィルタ</label>
+      <select id="live-koshu-filter" onchange="renderLive()">
+        <option value="">すべて</option>
+        <option value="土木一式">土木一式</option>
+        <option value="建築一式">建築一式</option>
+        <option value="舗装">舗装</option>
+        <option value="塗装">塗装</option>
+        <option value="電気">電気</option>
+        <option value="管">管</option>
+        <option value="建具">建具</option>
+        <option value="とび">とび</option>
+        <option value="防水">防水</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="live-cards"></div>
+</div>
+
 <!-- ===== DASHBOARD ===== -->
-<div id="dashboard" class="page active">
+<div id="dashboard" class="page">
   <div class="stat-row" id="kpi-row"></div>
 
   <div class="insight">
@@ -302,10 +337,15 @@ button:active{transform:translateY(0)}
 <script>
 // ===== DATA =====
 let DATA = null;
+let LIVE = null;
 
 async function loadData() {
-  const resp = await fetch('data.json');
-  DATA = await resp.json();
+  const [dataResp, liveResp] = await Promise.all([
+    fetch('data.json'),
+    fetch('live.json').catch(() => null),
+  ]);
+  DATA = await dataResp.json();
+  if (liveResp && liveResp.ok) LIVE = await liveResp.json();
   initApp();
 }
 
@@ -333,6 +373,7 @@ function makeTable(headers, rows) {
 
 // ===== INIT =====
 function initApp() {
+  renderLive();
   renderKPI();
   renderRateChart();
   renderKoshuTable();
@@ -653,6 +694,112 @@ function renderAlertPreview() {
       ${makeTable(['開札日','工事名','予定価格','工種','入札者'], rows)}
     </div>
   `;
+}
+
+// ===== LIVE BIDS =====
+function predictForCase(koshu, yoteiHint) {
+  const koshuBase = (koshu || '').split('(')[0].replace(/[．・]/g, '').trim();
+  // 工種別落札率を取得
+  const rates = [];
+  DATA.details.forEach(d => {
+    const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+    const k = (d['工種ランク'] || '').split('(')[0].trim();
+    if (y && r && y > 0 && k.includes(koshuBase)) {
+      const rate = r / y * 100;
+      if (rate >= 50 && rate <= 105) rates.push(rate);
+    }
+  });
+  // フォールバック
+  if (rates.length < 3) {
+    DATA.details.forEach(d => {
+      const y = toNum(d['予定価格']), r = toNum(d['落札金額']);
+      if (y && r && y > 0) { const rate = r / y * 100; if (rate >= 50 && rate <= 105) rates.push(rate); }
+    });
+  }
+  rates.sort((a, b) => a - b);
+  const median = rates[Math.floor(rates.length / 2)] || 90.1;
+  const q1 = rates[Math.floor(rates.length / 4)] || 89.5;
+  const q3 = rates[Math.floor(3 * rates.length / 4)] || 90.6;
+  return { median, q1, q3, saiteiRate: 89.94, n: rates.length, koshuBase };
+}
+
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.ceil((target - today) / 86400000);
+}
+
+function renderLive() {
+  if (!LIVE || !LIVE.upcoming) {
+    document.getElementById('live-cards').innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center">リアルタイムデータを読み込み中...</div>';
+    return;
+  }
+
+  const search = (document.getElementById('live-search')?.value || '').toLowerCase();
+  const koshuFilter = document.getElementById('live-koshu-filter')?.value || '';
+
+  // 工事系のみフィルタ
+  const constructionKw = ['土木一式','建築一式','舗装','とび','塗装','防水','電気','管','機械器具','建具','暖冷房','消防用設備','建物附属'];
+  let items = LIVE.upcoming.filter(r => constructionKw.some(kw => (r['工種'] || '').includes(kw)));
+
+  if (koshuFilter) items = items.filter(r => (r['工種'] || '').includes(koshuFilter));
+  if (search) items = items.filter(r => (r['工事名'] || '').toLowerCase().includes(search) || (r['工事場所'] || '').toLowerCase().includes(search));
+
+  document.getElementById('live-meta').textContent = `${items.length}件の工事案件 / 最終更新: ${LIVE.fetched_at?.substring(0, 10) || '-'}`;
+
+  if (!items.length) {
+    document.getElementById('live-cards').innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center">条件に合う案件がありません</div>';
+    return;
+  }
+
+  let html = '';
+  items.forEach(r => {
+    const pred = predictForCase(r['工種']);
+    const days = daysUntil(r['開札予定日']);
+    const urgency = days <= 3 ? 'bad' : days <= 7 ? 'warn' : days <= 14 ? '' : 'muted';
+    const urgencyLabel = days <= 0 ? '本日' : days <= 3 ? `残${days}日` : days <= 7 ? `残${days}日` : `${days}日後`;
+    const urgencyBg = days <= 3 ? 'rgba(214,48,49,0.1)' : days <= 7 ? 'rgba(255,107,53,0.1)' : 'transparent';
+
+    html += `
+    <div class="card" style="border-left:4px solid ${days <= 3 ? 'var(--red)' : days <= 7 ? 'var(--orange)' : 'var(--accent)'};background:${urgencyBg}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:250px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="tag tag-blue">${r['工種']}</span>
+            <span class="tag ${days <= 3 ? 'tag-orange' : 'tag-green'}">${urgencyLabel}</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px">${r['工事名']}</div>
+          <div style="font-size:12px;color:var(--muted)">
+            ${r['工事場所']} / ${r['契約担当課']} / 案件番号: ${r['案件番号']}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">
+            公告日: ${r['公告日']} → 開札予定日: <strong style="color:var(--text)">${r['開札予定日']}</strong>
+          </div>
+        </div>
+        <div style="background:var(--card2);border-radius:10px;padding:14px 18px;min-width:260px;border:1px solid rgba(0,180,216,0.15)">
+          <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:8px">AI推奨入札額（予定価格の%）</div>
+          <div style="display:flex;gap:16px;font-size:13px">
+            <div style="text-align:center">
+              <div style="color:var(--orange);font-weight:900;font-size:16px">${pred.q1.toFixed(1)}%</div>
+              <div style="color:var(--muted);font-size:10px">攻め</div>
+            </div>
+            <div style="text-align:center">
+              <div style="color:var(--green);font-weight:900;font-size:20px">${pred.median.toFixed(1)}%</div>
+              <div style="color:var(--muted);font-size:10px">推奨</div>
+            </div>
+            <div style="text-align:center">
+              <div style="color:var(--accent);font-weight:900;font-size:16px">${pred.q3.toFixed(1)}%</div>
+              <div style="color:var(--muted);font-size:10px">安全</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">過去${pred.n}件の${pred.koshuBase || '全工種'}データに基づく</div>
+          <div style="font-size:10px;color:var(--muted)">最低制限価格率: ${pred.saiteiRate}%</div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('live-cards').innerHTML = html;
 }
 
 // ===== BOOT =====
