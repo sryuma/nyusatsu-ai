@@ -212,11 +212,20 @@ button:hover{opacity:.9;transform:translateY(-1px)}
 </div>
 
 <div id="listings" class="page">
+  <div id="paint-summary"></div>
   <div class="card">
-    <h2><span class="dot" style="background:var(--accent)"></span>過去の落札結果（808件）</h2>
+    <h2><span class="dot" style="background:var(--accent)"></span>過去の落札結果</h2>
     <div class="form-grid" style="margin-bottom:12px">
-      <div class="form-group"><label>検索</label><input type="text" id="list-search" placeholder="工事名・業者名..." oninput="renderListings()"></div>
+      <div class="form-group"><label>検索（塗装・防水・外壁などで絞り込めます）</label><input type="text" id="list-search" placeholder="塗装、防水、外壁、改修..." oninput="renderListings()"></div>
       <div class="form-group"><label>並び替え</label><select id="list-sort" onchange="renderListings()"><option value="date-desc">開札日（新しい順）</option><option value="date-asc">古い順</option><option value="amount-desc">金額（高い順）</option><option value="amount-asc">金額（低い順）</option></select></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="document.getElementById('list-search').value='塗装';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--orange);box-shadow:none">塗装</button>
+      <button onclick="document.getElementById('list-search').value='防水';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--orange);box-shadow:none">防水</button>
+      <button onclick="document.getElementById('list-search').value='外壁';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--orange);box-shadow:none">外壁</button>
+      <button onclick="document.getElementById('list-search').value='改修';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--accent);box-shadow:none">改修</button>
+      <button onclick="document.getElementById('list-search').value='補修';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--accent);box-shadow:none">補修</button>
+      <button onclick="document.getElementById('list-search').value='';renderListings()" style="padding:6px 14px;font-size:12px;border-radius:20px;background:var(--muted);box-shadow:none">全件表示</button>
     </div>
     <div id="listing-count" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
     <div class="table-wrap" style="max-height:600px" id="listing-table"></div>
@@ -259,6 +268,7 @@ function initAll(){
   try{renderKoshuTable()}catch(e){console.error('renderKoshuTable',e)}
   try{renderBidderCountTable()}catch(e){console.error('renderBidderCountTable',e)}
   try{renderCompetitors()}catch(e){console.error('renderCompetitors',e)}
+  try{renderPaintSummary()}catch(e){console.error('renderPaintSummary',e)}
   try{renderListings()}catch(e){console.error('renderListings',e)}
 }
 
@@ -428,6 +438,38 @@ function showComp(idx){
 }
 
 // === LISTINGS ===
+function renderPaintSummary(){
+  var paintKw=['塗装','防水','外壁','屋根','コーティング','シーリング'];
+  var cases=[];
+  DATA.details.forEach(function(d){
+    var t=d['工事名']||'';var k=d['工種ランク']||'';
+    if(paintKw.some(function(kw){return t.indexOf(kw)>=0||k.indexOf(kw)>=0})){
+      var y=toNum(d['予定価格']);var r=toNum(d['落札金額']);
+      if(y&&r&&y>0){var rate=r/y*100;if(rate>=50&&rate<=105)cases.push({title:t,yotei:y,raku:r,rate:rate,date:d['開札日']||'',winner:d['落札業者名']||''})}
+    }
+  });
+  if(!cases.length){document.getElementById('paint-summary').innerHTML='';return}
+  cases.sort(function(a,b){return b.date>a.date?1:-1});
+  var rates=cases.map(function(c){return c.rate}).sort(function(a,b){return a-b});
+  var med=rates[Math.floor(rates.length/2)];
+  var totalAmt=cases.reduce(function(s,c){return s+c.yotei},0);
+  var h='<div class="card" style="border-left:4px solid var(--orange);background:linear-gradient(135deg,#fff8f0,#fff)">';
+  h+='<h2><span class="dot" style="background:var(--orange)"></span>塗装・防水・外壁の過去実績サマリー</h2>';
+  h+='<div class="stat-row" style="margin-bottom:12px">';
+  h+='<div class="stat-box"><div class="val" style="color:var(--orange)">'+cases.length+'</div><div class="lbl">案件数（直近1年）</div></div>';
+  h+='<div class="stat-box"><div class="val" style="color:var(--orange)">'+med.toFixed(1)+'%</div><div class="lbl">落札率中央値</div></div>';
+  h+='<div class="stat-box"><div class="val" style="color:var(--orange)">'+fmt(Math.round(totalAmt/cases.length))+'</div><div class="lbl">平均予定価格</div></div>';
+  h+='</div>';
+  h+='<div style="font-size:13px;color:var(--sub);margin-bottom:8px">直近の塗装・防水・外壁案件（下のボタンで全件表示できます）</div>';
+  h+='<div class="table-wrap" style="max-height:250px">';
+  h+='<table><tr><th>開札日</th><th>工事名</th><th>予定価格</th><th>落札金額</th><th>落札率</th><th>落札者</th></tr>';
+  cases.slice(0,10).forEach(function(c){
+    h+='<tr><td style="color:var(--muted)">'+c.date+'</td><td>'+c.title.substring(0,35)+'</td><td class="num">'+fmt(c.yotei)+'円</td><td class="num">'+fmt(c.raku)+'円</td><td class="num" style="color:var(--orange);font-weight:700">'+c.rate.toFixed(1)+'%</td><td>'+c.winner.substring(0,15)+'</td></tr>';
+  });
+  h+='</table></div></div>';
+  document.getElementById('paint-summary').innerHTML=h;
+}
+
 function renderListings(){
   var search=(document.getElementById('list-search').value||'').toLowerCase();var sort=document.getElementById('list-sort').value||'date-desc';
   var items=DATA.results.map(function(r){return Object.assign({},r,{_a:toNum(r['落札金額']),_d:r['開札日']||''})});
