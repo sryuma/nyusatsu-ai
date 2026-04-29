@@ -163,7 +163,7 @@ button:hover{opacity:.9;transform:translateY(-1px)}
   </div>
   <div class="form-grid" style="margin-bottom:16px">
     <div class="form-group"><label>検索</label><input type="text" id="live-search" placeholder="工事名・場所で検索..." oninput="renderLive()"></div>
-    <div class="form-group"><label>工種フィルタ</label><select id="live-filter" onchange="renderLive()"><option value="">すべて</option><option>土木一式</option><option>建築一式</option><option>舗装</option><option>塗装</option><option>電気</option><option>管</option><option>建具</option></select></div>
+    <div class="form-group"><label>工種フィルタ</label><select id="live-filter" onchange="renderLive()"><option value="">すべて</option><option>塗装</option><option>防水</option><option>外壁</option><option>改修</option><option>補修</option><option>土木一式</option><option>建築一式</option><option>舗装</option><option>電気</option><option>管</option><option>建具</option></select></div>
   </div>
   <div id="live-cards" class="loading">読み込み中...</div>
 </div>
@@ -265,12 +265,25 @@ function initAll(){
 // === LIVE (filtered items cache) ===
 var _liveFiltered=[];
 
+function isConstructionItem(r){
+  var koshu=(r['工種']||'').replace(/\s/g,'');
+  var title=r['工事名']||'';
+  // 工種マッチ（スペース除去で「電 気」→「電気」にも対応）
+  var koshuKw=['土木','建築','舗装','とび','塗装','防水','電気','管','機械器具','建具','暖冷房','消防','造園','解体','鋼構造','農業土木'];
+  if(koshuKw.some(function(kw){return koshu.indexOf(kw)>=0}))return true;
+  // タイトルに工事系キーワード
+  var titleKw=['工事','改修','補修','修繕','塗装','防水','外壁','屋根','足場','舗装','築造','整備','設置','新築','増築'];
+  if(titleKw.some(function(kw){return title.indexOf(kw)>=0}))return true;
+  return false;
+}
+
 function getLiveFiltered(){
   var search=(document.getElementById('live-search').value||'').toLowerCase();
   var kf=document.getElementById('live-filter').value||'';
-  var cKw=['土木一式','建築一式','舗装','とび','塗装','防水','電気','管','機械器具','建具','暖冷房','消防用設備','建物附属'];
-  var items=LIVE.upcoming.filter(function(r){return cKw.some(function(kw){return(r['工種']||'').indexOf(kw)>=0})});
-  if(kf)items=items.filter(function(r){return(r['工種']||'').indexOf(kf)>=0});
+  var items=LIVE.upcoming.filter(isConstructionItem);
+  // 物品購入を除外
+  items=items.filter(function(r){var t=r['工事名']||'';return t.indexOf('の購入')<0&&t.indexOf('品目の購入')<0});
+  if(kf)items=items.filter(function(r){return(r['工種']||'').replace(/\s/g,'').indexOf(kf)>=0||(r['工事名']||'').indexOf(kf)>=0});
   if(search)items=items.filter(function(r){return(r['工事名']||'').toLowerCase().indexOf(search)>=0||(r['工事場所']||'').toLowerCase().indexOf(search)>=0});
   _liveFiltered=items;
   return items;
