@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入札AI 使い方ガイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#2563eb;--green:#059669;--orange:#ea580c;--red:#dc2626;--text:#1a1a2e;--sub:#4a5568;--muted:#94a3b8;--bg:#f8fafc;--card:#fff;--border:#e2e8f0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);line-height:1.9}
+.wrap{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+
+.hero{text-align:center;padding:48px 20px 40px;margin-bottom:32px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:20px;border:1px solid var(--border)}
+.hero h1{font-size:28px;font-weight:900;margin-bottom:8px}
+.hero h1 span{color:var(--accent)}
+.hero p{font-size:14px;color:var(--sub)}
+.hero .url{display:inline-block;margin-top:16px;background:var(--accent);color:#fff;padding:10px 24px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none}
+
+.toc{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:32px}
+.toc h2{font-size:15px;font-weight:800;margin-bottom:12px;color:var(--accent)}
+.toc ol{padding-left:20px;font-size:14px;line-height:2.2}
+.toc a{color:var(--accent);text-decoration:none;font-weight:600}
+
+.section{margin-bottom:36px}
+.section h2{font-size:20px;font-weight:900;margin-bottom:16px;padding-bottom:10px;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:10px}
+.section h2 .num{background:var(--accent);color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
+.section h3{font-size:16px;font-weight:700;margin:20px 0 10px;color:var(--sub)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+
+.step{display:flex;gap:14px;margin:14px 0;align-items:flex-start}
+.step .icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;color:#fff}
+.step .icon.blue{background:var(--accent)}.step .icon.green{background:var(--green)}.step .icon.orange{background:var(--orange)}
+.step .body{flex:1;font-size:14px}
+.step .body strong{color:var(--text)}
+
+.tip{background:#f0fdf4;border-left:4px solid var(--green);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0;font-size:13px;color:#065f46}
+.tip strong{color:var(--green)}
+
+.warn{background:#fef2f2;border-left:4px solid var(--red);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0;font-size:13px;color:#991b1b}
+.warn strong{color:var(--red)}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.data-table th{text-align:left;padding:8px 12px;background:var(--bg);color:var(--muted);font-weight:600;font-size:11px;border-bottom:2px solid var(--border)}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.data-table .num{text-align:right;font-weight:700}
+.hl{color:var(--accent);font-weight:700}
+
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-blue{background:#dbeafe;color:var(--accent)}
+.badge-green{background:#d1fae5;color:var(--green)}
+.badge-orange{background:#ffedd5;color:var(--orange)}
+
+.screenshot{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;text-align:center;color:var(--muted);font-size:12px}
+
+.footer{text-align:center;padding:32px 0;color:var(--muted);font-size:11px;border-top:1px solid var(--border);margin-top:40px}
+
+@media(max-width:600px){
+  .wrap{padding:16px 12px 40px}
+  .hero{padding:32px 16px 28px}
+  .hero h1{font-size:22px}
+  .section h2{font-size:17px}
+  .card{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HERO -->
+<div class="hero">
+  <h1>入札<span>AI</span> 使い方ガイド</h1>
+  <p>広島市公共工事の入札を、データで勝つ。</p>
+  <a href="https://sryuma.github.io/nyusatsu-ai/" target="_blank" class="url">入札AIを開く</a>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>目次</h2>
+  <ol>
+    <li><a href="#s1">入札案件 — 今募集中の工事を見る</a></li>
+    <li><a href="#s2">過去案件 — 過去の落札データを調べる</a></li>
+    <li><a href="#s3">落札額予測 — いくらで入れるべきか計算する</a></li>
+    <li><a href="#s4">競合分析 — ライバルの入札パターンを知る</a></li>
+    <li><a href="#s5">データの見方 — 数字の意味を理解する</a></li>
+    <li><a href="#s6">よくある質問</a></li>
+  </ol>
+</div>
+
+<!-- 1. 入札案件 -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span>入札案件 — 今募集中の工事を見る</h2>
+  <p>トップページに表示される「入札案件」タブが最も重要な画面です。<strong>今この瞬間に広島市が募集している工事案件</strong>が一覧表示されます。</p>
+
+  <div class="card">
+    <h3>画面の見方</h3>
+    <div class="step">
+      <div class="icon blue">1</div>
+      <div class="body"><strong>工種タグ</strong>（青）と<strong>残日数</strong>（赤/オレンジ/緑）が左上に表示。残3日以内は赤、7日以内はオレンジ。</div>
+    </div>
+    <div class="step">
+      <div class="icon blue">2</div>
+      <div class="body"><strong>工事名・場所・公告日・開札予定日</strong>が中央に表示。開札予定日が入札の締切。</div>
+    </div>
+    <div class="step">
+      <div class="icon green">3</div>
+      <div class="body"><strong>予定価格（推定）</strong>が表示。過去の類似案件からAIが自動推定した金額。</div>
+    </div>
+    <div class="step">
+      <div class="icon green">4</div>
+      <div class="body">右側の<strong>「AI推奨入札額」</strong>ボックスが最重要。3段階で推奨入札額が表示される。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>AI推奨入札額の3段階</h3>
+    <table class="data-table">
+      <tr><th>レベル</th><th>意味</th><th>落札率</th><th>リスク</th></tr>
+      <tr><td><span class="badge badge-orange">攻め</span></td><td>最低制限ギリギリ。勝てる確率は高いが失格リスクもある</td><td class="num">約89.7%</td><td>高</td></tr>
+      <tr><td><span class="badge badge-green">推奨</span></td><td>過去データの中央値。最もバランスが良い</td><td class="num hl">約90.4%</td><td>中</td></tr>
+      <tr><td><span class="badge badge-blue">安全</span></td><td>少し高めだが確実に失格しない安全圏</td><td class="num">約92.5%</td><td>低</td></tr>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>使い方のコツ:</strong> 初めて入札する案件は「推奨」の金額で入れる。慣れてきたら「攻め」に近づけて利益率を上げる。
+  </div>
+
+  <div class="card">
+    <h3>フィルタの使い方</h3>
+    <p>上部の「工種フィルタ」で<strong>塗装・防水・外壁・改修・補修</strong>など、工種ごとに絞り込めます。検索ボックスでは工事名や場所でキーワード検索も可能。</p>
+  </div>
+</div>
+
+<!-- 2. 過去案件 -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span>過去案件 — 過去の落札データを調べる</h2>
+  <p>直近1年間の広島市＋呉市の落札結果が<strong>全3,086件</strong>入っています。</p>
+
+  <div class="card">
+    <h3>工種フィルタで絞り込む</h3>
+    <p>プルダウンから工種を選ぶだけ。たとえば「塗装」を選ぶと：</p>
+    <div class="step">
+      <div class="icon orange">!</div>
+      <div class="body">過去1年で塗装工事が<strong>何件あったか</strong>がわかる → 今後も同じペースで発注される見込み</div>
+    </div>
+    <div class="step">
+      <div class="icon orange">!</div>
+      <div class="body">各案件の<strong>落札金額と落札者</strong>が見える → 競合がいくらで落としているかわかる</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>ページ上部のサマリー</h3>
+    <p>過去案件タブの上部に、<strong>塗装・防水・外壁の実績サマリー</strong>が自動表示されます。</p>
+    <table class="data-table">
+      <tr><th>項目</th><th>内容</th></tr>
+      <tr><td>案件数</td><td>直近1年の塗装・防水・外壁の案件数</td></tr>
+      <tr><td>落札率中央値</td><td>この工種で勝つために必要な価格レベル</td></tr>
+      <tr><td>平均予定価格</td><td>この工種の平均的な案件規模</td></tr>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>室田工業の場合:</strong> 「塗装」「防水」「外壁」で過去実績を確認 → 年間どれくらい発注があるかを把握 → 入札参加の計画を立てる。
+  </div>
+</div>
+
+<!-- 3. 落札額予測 -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span>落札額予測 — いくらで入れるべきか計算する</h2>
+  <p>具体的な案件の予定価格がわかっている場合に使います。</p>
+
+  <div class="card">
+    <h3>入力する項目</h3>
+    <div class="step">
+      <div class="icon blue">1</div>
+      <div class="body"><strong>予定価格（円）</strong> — 設計図書などで判明した予定価格を入力</div>
+    </div>
+    <div class="step">
+      <div class="icon blue">2</div>
+      <div class="body"><strong>工種</strong> — 土木一式、建築一式、舗装、電気、管 など</div>
+    </div>
+    <div class="step">
+      <div class="icon blue">3</div>
+      <div class="body"><strong>想定入札者数</strong> — 何社くらい入札しそうか予想。わからなければ10のまま</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>結果の読み方</h3>
+    <p>「予測する」ボタンを押すと、3段階の入札額と最低制限価格の推定値が表示されます。予定価格に対する%と、具体的な円額の両方が出ます。</p>
+  </div>
+
+  <div class="warn">
+    <strong>注意:</strong> 最低制限価格を下回ると<strong>即失格</strong>です。「攻め」の金額は最低制限の0.1%上を狙っているため、予定価格が正確でないと失格リスクがあります。確信がない場合は「推奨」以上で入札してください。
+  </div>
+</div>
+
+<!-- 4. 競合分析 -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span>競合分析 — ライバルの入札パターンを知る</h2>
+  <p>過去に入札に参加した<strong>全1,238社</strong>の応札回数・落札回数・勝率が見れます。</p>
+
+  <div class="card">
+    <h3>使い方</h3>
+    <div class="step">
+      <div class="icon blue">1</div>
+      <div class="body">上部の検索ボックスに業者名を入力して絞り込み</div>
+    </div>
+    <div class="step">
+      <div class="icon blue">2</div>
+      <div class="body">業者名をタップすると、下に<strong>入札履歴</strong>が表示される</div>
+    </div>
+    <div class="step">
+      <div class="icon green">3</div>
+      <div class="body">入札額と結果（落札/失格）が一覧で見れる → その業者の価格戦略がわかる</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>活用法:</strong> 自分が入札したい工種で常連の業者を調べる → その業者の勝率と入札パターンを把握 → 自分の入札戦略に活かす。
+  </div>
+</div>
+
+<!-- 5. データの見方 -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span>データの見方 — 数字の意味を理解する</h2>
+
+  <div class="card">
+    <h3>落札率とは</h3>
+    <p><strong>落札金額 &divide; 予定価格 &times; 100</strong> で計算される数値。</p>
+    <table class="data-table">
+      <tr><th>落札率</th><th>意味</th></tr>
+      <tr><td class="num">100%</td><td>予定価格と同額で落札（1社しか入札しない場合に多い）</td></tr>
+      <tr><td class="num hl">90〜91%</td><td>最も多い落札ゾーン。全体の77%がここに集中</td></tr>
+      <tr><td class="num" style="color:var(--red)">89.9%以下</td><td>最低制限価格に近い。失格リスクあり</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>最低制限価格とは</h3>
+    <p>これを下回ると<strong>失格</strong>になる下限価格。広島市の場合、予定価格の<strong>約89.9%</strong>に設定されている（88.3〜92.3%の範囲）。</p>
+    <p style="margin-top:8px">つまり、<strong>予定価格の89.9%〜90.5%</strong>の狭いレンジが勝負ゾーン。</p>
+  </div>
+
+  <div class="card">
+    <h3>データソース</h3>
+    <table class="data-table">
+      <tr><th>ソース</th><th>内容</th><th>件数</th></tr>
+      <tr><td>広島市調達情報公開システム</td><td>工事・コンサル・委託・施設・リースの落札結果</td><td class="num">2,827件</td></tr>
+      <tr><td>呉市契約課HP</td><td>一般競争入札の工事結果</td><td class="num">259件</td></tr>
+      <tr><td colspan="2" style="font-weight:700">合計</td><td class="num hl">3,086件</td></tr>
+    </table>
+    <p style="margin-top:8px;font-size:12px;color:var(--muted)">データ期間: 2025年4月 〜 2026年3月（約1年間）/ 入札者データ: 19,920件（1,238社）</p>
+  </div>
+</div>
+
+<!-- 6. FAQ -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span>よくある質問</h2>
+
+  <div class="card">
+    <h3>Q. 塗装の案件が1件しかないけど？</h3>
+    <p>「入札案件」タブに表示されるのは<strong>今この瞬間に募集中の案件</strong>です。広島市の全6,138件の公開データから抽出しているので、漏れはありません。塗装案件は時期によって増減します。「過去案件」タブで工種フィルタを「塗装」にすると、過去1年の発注ボリュームが確認できます。</p>
+  </div>
+
+  <div class="card">
+    <h3>Q. 予定価格（推定）はどうやって出しているの？</h3>
+    <p>過去の類似案件（工事名のキーワードマッチ＋工種マッチ）の予定価格の中央値から推定しています。正確な予定価格は入札公告の設計図書で確認してください。</p>
+  </div>
+
+  <div class="card">
+    <h3>Q. データはいつ更新される？</h3>
+    <p>現時点では手動更新です。今後、毎日自動で最新データを取得する仕組みを構築予定です。</p>
+  </div>
+
+  <div class="card">
+    <h3>Q. 広島市以外の案件は見れる？</h3>
+    <p>現在は広島市と呉市のデータが入っています。広島県や他市町村のデータも順次追加予定です。</p>
+  </div>
+
+  <div class="card">
+    <h3>Q. このシステムを使えば必ず落札できる？</h3>
+    <p>落札を保証するものではありません。ただし、過去データに基づいた「勝てるレンジ」を知った上で入札することで、<strong>闇雲に入札するより格段に勝率が上がります</strong>。トップクラスの業者でも勝率は約20%。数を打てる体制を整えることが重要です。</p>
+  </div>
+</div>
+
+<div class="footer">
+  入札AI — 広島AI<br>
+  お問い合わせ: 住田（広島AI）
+</div>
+
+</div>
+</body>
+</html>
