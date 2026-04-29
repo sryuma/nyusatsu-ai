@@ -88,7 +88,57 @@ button:hover{opacity:.9;transform:translateY(-1px)}
 .loading{color:var(--muted);padding:40px;text-align:center}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@media(max-width:700px){.stat-row{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.nav-tab{padding:6px 10px;font-size:12px}.rec-box{min-width:auto;margin-top:12px}}
+
+/* === MOBILE === */
+@media(max-width:700px){
+  .nav{padding:0 12px}
+  .nav-inner{height:50px;gap:6px}
+  .nav-logo{font-size:16px;margin-right:12px}
+  .nav-tabs{gap:2px}
+  .nav-tab{padding:6px 10px;font-size:11px;border-radius:6px}
+  .container{padding:12px 10px}
+  .card{padding:16px;border-radius:12px;margin-bottom:12px}
+  .card h2{font-size:15px;margin-bottom:10px}
+  .stat-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+  .stat-box{padding:12px 8px;border-radius:10px}
+  .stat-box .val{font-size:20px}
+  .stat-box .lbl{font-size:10px}
+  .grid2{grid-template-columns:1fr;gap:12px}
+  .form-grid{grid-template-columns:1fr;gap:10px;margin-bottom:14px}
+  input,select{padding:10px 12px;font-size:13px;border-radius:8px}
+  button{padding:12px 20px;font-size:14px;width:100%;border-radius:10px}
+  table{font-size:11px}
+  th,td{padding:6px 8px}
+  .table-wrap{max-height:400px;border-radius:8px}
+  .insight{padding:12px 14px;font-size:12px;margin:10px 0}
+  .result-box{padding:16px;margin:12px 0;border-radius:10px}
+  .result-box h3{font-size:14px}
+  .result-row{padding:8px 0;font-size:13px}
+
+  /* live card mobile */
+  .live-card{padding:14px;border-radius:12px;margin-bottom:10px}
+  .live-card .tag{font-size:10px;padding:2px 8px}
+  .live-card>div>div:first-child>div:nth-child(2){font-size:15px!important}
+  .live-card>div>div:first-child>div:nth-child(3),
+  .live-card>div>div:first-child>div:nth-child(4){font-size:12px!important}
+  .live-card>div{flex-direction:column!important;gap:12px!important}
+
+  /* rec box mobile - 横並びキープだが小さく */
+  .rec-box{min-width:auto;padding:12px;border-radius:10px}
+  .rec-box .title{font-size:11px;margin-bottom:6px}
+  .rec-amounts{gap:4px;margin-bottom:6px}
+  .rec-item{padding:6px 2px;border-radius:8px}
+  .rec-item .pct{font-size:12px}
+  .rec-item.rec .pct{font-size:16px}
+  .rec-item .amt{font-size:11px}
+  .rec-item .lbl{font-size:9px}
+  .rec-note{font-size:9px}
+
+  /* yotei input mobile */
+  .yotei-input{flex-wrap:wrap;gap:6px;margin-top:8px}
+  .yotei-input input{width:130px;padding:8px 10px;font-size:13px}
+  .yotei-input span{font-size:11px}
+}
 </style>
 </head>
 <body>
